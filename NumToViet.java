@@ -32,6 +32,18 @@ public class NumToViet {
             "tỷ tỷ"
     );
 
+    private static final List<String> billionsName = Arrays.asList(
+            "",
+            "tỷ",
+            "tỷ tỷ"
+    );
+
+    private final boolean groupByBillion;
+
+    private NumToViet(boolean groupByBillion) {
+        this.groupByBillion = groupByBillion;
+    }
+
     // Algorithm section
 
     /**
@@ -41,7 +53,7 @@ public class NumToViet {
      * @param showZeroHundred whether to show Zero hundred
      * @return vietnamese string represent the input number
      */
-    private static String readTriple(String triplet, boolean showZeroHundred) {
+    private String readTriple(String triplet, boolean showZeroHundred) {
         int a = charToInt(triplet.charAt(0));
         int b = charToInt(triplet.charAt(1));
         int c = charToInt(triplet.charAt(2));
@@ -66,8 +78,7 @@ public class NumToViet {
         return digitsName.get(a) + " trăm " + readPair(b, c);
     }
 
-
-    private static String readPair(int b, int c) {
+    private String readPair(int b, int c) {
         switch (b) {
             case 0:
                 return c == 0 ? "" : "lẻ " + digitsName.get(c);
@@ -96,11 +107,11 @@ public class NumToViet {
         }
     }
 
-    private static int charToInt(int c) {
+    private int charToInt(int c) {
         return c - '0';
     }
 
-    public static String num2String(long num) {
+    public String num2String(long num) {
 
         if (num == 0L) {
             return "không";
@@ -110,6 +121,10 @@ public class NumToViet {
             return "âm " + num2String(-num);
         }
 
+        return groupByBillion ? toWordsGroupByBillion(num) : toWordsGroupByThousand(num);
+    }
+
+    private String toWordsGroupByThousand(long num) {
         String str = Long.valueOf(num).toString();
 
         // zero padding in front of string to prepare for splitting
@@ -144,6 +159,62 @@ public class NumToViet {
         return sb.toString().trim();
     }
 
+    private String toWordsGroupByBillion(long num) {
+        String str = Long.valueOf(num).toString();
+
+        // zero padding in front of string to prepare for splitting
+        if (str.length() % 9 > 0) {
+            str = "000000000".substring(str.length() % 9) + str;
+        }
+
+        // Split into chunks of 9 digits each
+        List<String> groupOfBillion = new ArrayList<>();
+        for (int i = 0; i < str.length(); i += 9) {
+            groupOfBillion.add(str.substring(i, i + 9));
+        }
+
+        String words = "";
+        for (int i = 0; i < groupOfBillion.size(); i++) {
+            String nonuple = groupOfBillion.get(i);
+
+            // Split into chunks of 3 digits each
+            List<String> groupOfThousand = new ArrayList<>();
+            for (int j = 0; j < nonuple.length(); j += 3) {
+                groupOfThousand.add(nonuple.substring(j, j + 3));
+            }
+
+            String nonupleWords = "";
+            for (int j = 0; j < groupOfThousand.size(); j++) {
+                String triple = groupOfThousand.get(j);
+                String tripleWords = readTriple(triple, doShowZeroHundred(groupOfThousand, j)).trim();
+                if (!tripleWords.isEmpty()) {
+                    nonupleWords += tripleWords + " " + thousandsName.get(groupOfThousand.size() - 1 - j) + " ";
+                }
+            }
+            nonupleWords = nonupleWords.trim();
+            if (!nonupleWords.isEmpty()) {
+                words += " " + nonupleWords.trim() + " " + billionsName.get(groupOfBillion.size() - 1 - i);
+            }
+        }
+
+        return words.trim();
+    }
+
+    /**
+     * Determine whether to show zero-hundred text.
+     *
+     * @param groupOfThousand number represented in group of 3 digits of each 1000^n
+     * @return a boolean
+     */
+    private boolean doShowZeroHundred(List<String> groupOfThousand, int index) {
+        for (int i = 0; i < index; i++) {
+            if (!groupOfThousand.get(i).equals("000")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void main(String[] args) {
         // Test section
         Map<Long, String> testCase = new LinkedHashMap<>();
@@ -158,7 +229,7 @@ public class NumToViet {
         testCase.put(315L, "ba trăm mười lăm");
         testCase.put(316L, "ba trăm mười sáu");
         testCase.put(-1_055L, "Âm một nghìn không trăm năm mươi lăm");
-        testCase.put(101_002_101_000_000_000L, "Một trăm lẻ một triệu tỷ không trăm lẻ hai nghìn tỷ một trăm lẻ một tỷ");
+        testCase.put(101_002_101_000_000_000L, "Một trăm lẻ một triệu không trăm lẻ hai nghìn một trăm lẻ một tỷ");
         testCase.put(100_000_000_000L, "Một trăm tỷ");
         testCase.put(1_000_000_000_000L, "Một nghìn tỷ");
         testCase.put(1_000_000_000_000_000L, "Một triệu tỷ");
@@ -367,8 +438,9 @@ public class NumToViet {
 
         // Execute tests
         AtomicInteger passed = new AtomicInteger();
+        NumToViet numToViet = new NumToViet(true);
         Boolean result = testCase.entrySet().stream().map(entry -> {
-            String vietString = num2String(entry.getKey());
+            String vietString = numToViet.num2String(entry.getKey());
 
             boolean comparision = entry.getValue().equalsIgnoreCase(vietString);
             if (!comparision) {
