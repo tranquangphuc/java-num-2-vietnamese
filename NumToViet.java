@@ -210,6 +210,7 @@ public class NumToViet {
                     nonupleWords += tripleWords + " " + thousandsName.get(groupOfThousand.size() - 1 - j) + " ";
                 }
             }
+
             nonupleWords = nonupleWords.trim();
             if (!nonupleWords.isEmpty()) {
                 words += " " + nonupleWords.trim() + " " + billionsName.get(groupOfBillion.size() - 1 - i);
