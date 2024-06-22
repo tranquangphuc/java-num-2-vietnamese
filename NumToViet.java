@@ -4,7 +4,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * A library to convert numeric value to String of words in Vietnamese.
  *
- * @see <a href="https://github.com/sluongng/java-num-2-vietnamese">java-num-2-vietnamese</a>
+ * @see <a href=
+ *      "https://github.com/sluongng/java-num-2-vietnamese">java-num-2-vietnamese</a>
  */
 public class NumToViet {
 
@@ -19,28 +20,44 @@ public class NumToViet {
             "sáu",
             "bảy",
             "tám",
-            "chín"
-    );
+            "chín");
 
-    private static final List<String> thousandsName = Arrays.asList(
+    private static final List<String> thousandsNghinName = Arrays.asList(
             "",
             "nghìn",
             "triệu",
             "tỷ",
             "nghìn tỷ",
             "triệu tỷ",
-            "tỷ tỷ"
-    );
+            "tỷ tỷ");
+
+    private static final List<String> thousandsNganName = Arrays.asList(
+            "",
+            "ngàn",
+            "triệu",
+            "tỷ",
+            "ngàn tỷ",
+            "triệu tỷ",
+            "tỷ tỷ");
 
     private static final List<String> billionsName = Arrays.asList(
             "",
             "tỷ",
-            "tỷ tỷ"
-    );
+            "tỷ tỷ");
 
+    private final boolean useLe;
+    private final boolean useNghin;
     private final boolean groupByBillion;
 
-    private NumToViet(boolean groupByBillion) {
+    /**
+     * 
+     * @param useLe          the alone number prefix, use "lẻ" if true, otherwise use "linh"
+     * @param useNghin       thousand place name, use "nghìn" if true, otherwise use "ngàn"
+     * @param groupByBillion group amount by billion
+     */
+    private NumToViet(boolean useLe, boolean useNghin, boolean groupByBillion) {
+        this.useLe = useLe;
+        this.useNghin = useNghin;
         this.groupByBillion = groupByBillion;
     }
 
@@ -81,7 +98,7 @@ public class NumToViet {
     private String readPair(int b, int c) {
         switch (b) {
             case 0:
-                return c == 0 ? "" : "lẻ " + digitsName.get(c);
+                return c == 0 ? "" : (useLe ? "lẻ " : "linh ") + digitsName.get(c);
             case 1:
                 switch (c) {
                     case 0:
@@ -121,10 +138,12 @@ public class NumToViet {
             return "âm " + num2String(-num);
         }
 
-        return groupByBillion ? toWordsGroupByBillion(num) : toWordsGroupByThousand(num);
+        List<String> thousandsName = useNghin ? thousandsNghinName : thousandsNganName;
+
+        return groupByBillion ? toWordsGroupByBillion(num, thousandsName) : toWordsGroupByThousand(num, thousandsName);
     }
 
-    private String toWordsGroupByThousand(long num) {
+    private String toWordsGroupByThousand(long num, List<String> thousandsName) {
         String str = Long.valueOf(num).toString();
 
         // zero padding in front of string to prepare for splitting
@@ -159,7 +178,7 @@ public class NumToViet {
         return sb.toString().trim();
     }
 
-    private String toWordsGroupByBillion(long num) {
+    private String toWordsGroupByBillion(long num, List<String> thousandsName) {
         String str = Long.valueOf(num).toString();
 
         // zero padding in front of string to prepare for splitting
@@ -230,6 +249,9 @@ public class NumToViet {
         testCase.put(316L, "ba trăm mười sáu");
         testCase.put(-1_055L, "Âm một nghìn không trăm năm mươi lăm");
         testCase.put(101_002_101_000_000_000L, "Một trăm lẻ một triệu không trăm lẻ hai nghìn một trăm lẻ một tỷ");
+        testCase.put(101_101_000_000_000L, "Một trăm lẻ một nghìn một trăm lẻ một tỷ");
+        testCase.put(100_001_000_000_000L, "Một trăm nghìn không trăm lẻ một tỷ");
+        testCase.put(101_000_000_000L, "một trăm lẻ một tỷ");
         testCase.put(100_000_000_000L, "Một trăm tỷ");
         testCase.put(1_000_000_000_000L, "Một nghìn tỷ");
         testCase.put(1_000_000_000_000_000L, "Một triệu tỷ");
@@ -438,7 +460,7 @@ public class NumToViet {
 
         // Execute tests
         AtomicInteger passed = new AtomicInteger();
-        NumToViet numToViet = new NumToViet(true);
+        NumToViet numToViet = new NumToViet(true, true, true);
         Boolean result = testCase.entrySet().stream().map(entry -> {
             String vietString = numToViet.num2String(entry.getKey());
 
